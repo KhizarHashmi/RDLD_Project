@@ -1,0 +1,17 @@
+# data and results live in ../RDLD_data, never in git
+data/
+results/
+*.parquet
+*.pt
+*.safetensors
+
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+.vscode/
+.idea/
+.env
+
+# kept on our own machines, not in the repository
+docs/background/
+docs/proposal/

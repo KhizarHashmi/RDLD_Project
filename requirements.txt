@@ -1,0 +1,14 @@
+torch==2.5.1
+torchvision==0.20.1
+transformers==5.17.0
+ultralytics==8.4.153
+pycocotools
+opencv-python
+numpy==2.2.6
+pillow
+pyarrow
+pandas
+scipy
+scikit-image
+matplotlib
+pyyaml
