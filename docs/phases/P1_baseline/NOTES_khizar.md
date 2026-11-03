@@ -83,8 +83,10 @@ DocLayNet equivalent and are dropped: 9,509 (heron) and 13,323 (egret) boxes at 
   copy is a cheap low-score false positive while the right copy earns credit, so hedging *raises* mAP.
   A downstream system taking boxes above a threshold receives both copies. This is direct evidence for
   RQ2 (mAP vs. usable output) before any degradation is applied.
-- Published heron mAP is 0.69 on DocLayNet; we measure 64.2 on our 300-page stratified subset, within
-  the subset's CI band of class/category composition effects but lower - reported, not tuned.
+- Published heron mAP is 0.69 on DocLayNet; we measure 64.2 (CI 60.4–68.4), so the published value lies
+  just above our interval. Plausible causes: our subset is category-balanced (manuals, heron's weakest
+  category at 42.2, are 1/6 of pages) and we drop docling-only classes. Reported as measured, not tuned  - 
+  the study's quantities are drops relative to each model's own clean score.
 - The original determinism check compared prediction lists position by position and reported false
   mismatches for the transformers (top-k queries with near-tied scores can reorder). Replaced by a
   set comparison; verified identical.
