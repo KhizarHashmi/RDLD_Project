@@ -66,11 +66,8 @@ def main():
         rd, mrd = rd_table(M, pd.read_csv(config.RESULTS / "p2" / "image_quality" / "iq_per_config.csv"))
         rd.to_csv(OUT / "rd_per_degradation.csv", index=False)
         mrd.to_csv(OUT / "mrd.csv", index=False)
-        print("RD per degradation:
-", rd.pivot(index="a", columns="model", values="RD").round(1).to_string())
-        print("
-mRD (RoDLA Eq. 4, mPE_IQA; lower = more robust):
-", mrd.round(1).to_string(index=False))
+        print("RD per degradation:\n", rd.pivot(index="a", columns="model", values="RD").round(1).to_string())
+        print("\nmRD (RoDLA Eq. 4, mPE_IQA; lower = more robust):\n", mrd.round(1).to_string(index=False))
         return
     jobs = [(m, c) for m in detectors.MODELS for c in configs.config
             if (config.PREDICTIONS / m / f"{c}.json").exists()]
