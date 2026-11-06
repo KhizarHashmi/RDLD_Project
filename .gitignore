@@ -12,6 +12,9 @@ __pycache__/
 .idea/
 .env
 
+# base paper PDF stays local; see docs/base_paper/README.md for links
+docs/base_paper/*.pdf
+
 # kept on our own machines, not in the repository
 docs/background/
 docs/proposal/
