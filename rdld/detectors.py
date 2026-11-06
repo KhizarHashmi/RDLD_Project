@@ -1,4 +1,4 @@
-"""One interface over the three layout detectors (Workstream B).
+"""One interface over the layout detectors (Workstream B).
 
 Every detector returns predictions in DocLayNet's 11-class space (ids 1-11).
 A prediction whose native label has no DocLayNet equivalent is dropped and
@@ -12,12 +12,20 @@ from collections import Counter
 import numpy as np
 import torch
 
+from rdld.config import DATA_ROOT
 from rdld.doclaynet import NAME_TO_ID
 
 MODELS = {
     "yolo": ("hantian/yolo-doclaynet", "YOLO, CNN one-stage (yolo26m)"),
     "heron": ("ds4sd/docling-layout-heron", "RT-DETR v2 transformer"),
     "egret": ("ds4sd/docling-layout-egret-medium", "D-FINE transformer"),
+    # extension set (added 2026-11-04): more DETR-family architectures and scales
+    "detr": ("cmarkea/detr-layout-detection", "DETR transformer (ResNet-50), DocLayNet"),
+    "ddetr": ("Aryn/deformable-detr-DocLayNet", "Deformable DETR (ResNet-50), DocLayNet"),
+    "heron101": ("docling-project/docling-layout-heron-101", "RT-DETR v2 transformer (ResNet-101)"),
+    "egretxl": ("docling-project/docling-layout-egret-xlarge", "D-FINE transformer (x-large)"),
+    # fine-tuned in this study (scripts/p7_finetune_rfdetr.py): no released layout checkpoint exists
+    "rfdetr": (str(DATA_ROOT / "finetune" / "rfdetr" / "best"), "RF-DETR (DINOv2-S backbone), fine-tuned on DocLayNet"),
 }
 
 # heron and egret share docling's 17-class space; the first 11 are DocLayNet's
@@ -30,6 +38,13 @@ DOCLING_TO_DOCLAYNET = {
 }
 # no DocLayNet equivalent -> dropped: document_index, code, checkbox_selected,
 # checkbox_unselected, form, key_value_region
+
+
+def to_doclaynet(name):
+    """Native label -> DocLayNet class name, or None (dropped). Handles 'list_item',
+    'List-item' and 'List item' alike; 'N/A' (DETR no-object slot) maps to None."""
+    key = name.strip().lower().replace("-", "_").replace(" ", "_")
+    return DOCLING_TO_DOCLAYNET.get(key)
 
 SCORE_FLOOR = 0.01   # keep low-confidence boxes: COCO mAP integrates over the full PR curve
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
@@ -47,15 +62,22 @@ class Prediction:
 
 
 class HFDetector:
-    """RT-DETR v2 / D-FINE checkpoints through transformers."""
+    """Transformer detectors through transformers (RT-DETR v2, D-FINE, DETR, Deformable DETR).
+    Each checkpoint runs with its own released image processor (resize / normalisation)."""
 
     def __init__(self, key, threshold=SCORE_FLOOR):
         from transformers import AutoImageProcessor, AutoModelForObjectDetection
         self.key, self.model_id = key, MODELS[key][0]
         self.threshold = threshold
         self.proc = AutoImageProcessor.from_pretrained(self.model_id)
-        self.model = AutoModelForObjectDetection.from_pretrained(self.model_id).to(DEVICE).eval()
+        if key == "detr":       # released as DetrForSegmentation; only its detection sub-model is run
+            from transformers import DetrForSegmentation
+            self.model = DetrForSegmentation.from_pretrained(self.model_id).detr.to(DEVICE).eval()
+        else:
+            self.model = AutoModelForObjectDetection.from_pretrained(self.model_id).to(DEVICE).eval()
         self.id2label = self.model.config.id2label
+        # DETR / Deformable DETR run slower per page when batched (padding + mask path): batch 1
+        self.batch = 1 if key in ("detr", "ddetr") else 8
 
     @torch.no_grad()
     def predict(self, images):
@@ -68,13 +90,13 @@ class HFDetector:
         preds = []
         for r in res:
             raw = [self.id2label[int(i)] for i in r["labels"]]
-            keep = [n in DOCLING_TO_DOCLAYNET for n in raw]
+            keep = [to_doclaynet(n) is not None for n in raw]
             dropped = Counter(n for n, k in zip(raw, keep) if not k)
             k = np.array(keep, dtype=bool)
             preds.append(Prediction(
                 boxes=r["boxes"].cpu().numpy()[k],
                 scores=r["scores"].cpu().numpy()[k],
-                labels=np.array([NAME_TO_ID[DOCLING_TO_DOCLAYNET[n]]
+                labels=np.array([NAME_TO_ID[to_doclaynet(n)]
                                  for n, kk in zip(raw, keep) if kk], dtype=int),
                 raw_labels=[n for n, kk in zip(raw, keep) if kk],
                 dropped=dropped))

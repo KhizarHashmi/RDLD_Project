@@ -65,7 +65,8 @@ def main():
         t_all = time.time()
         for n, cfg in enumerate(todo, 1):
             t0 = time.time()
-            batches = [images[i:i + BATCH] for i in range(0, len(images), BATCH)]
+            bs = getattr(det, "batch", BATCH)
+            batches = [images[i:i + bs] for i in range(0, len(images), bs)]
             futures = [pool.submit(load, cfg, b) for b in batches[:2]]
             dets = []
             for i, b in enumerate(batches):
