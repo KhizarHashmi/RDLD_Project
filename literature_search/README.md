@@ -31,7 +31,7 @@ Adds databases and a new query, Q5, aimed at the compound-degradation gap.
 
 | File | What it is |
 |---|---|
-| `run_browser_search.py` | Runs the queries in a visible browser through normal search pages, with long pauses. Worked for IEEE Xplore. It stops at a block or CAPTCHA and does not try to get past it. |
+| `run_browser_search.py` | Runs the queries in a visible browser through normal search pages, with long pauses. It completed IEEE Xplore. On SpringerLink and ScienceDirect it stopped at a CAPTCHA and did not try to get past it; we then exported SpringerLink by hand, and ScienceDirect asked for an institutional login we do not have. |
 | `run_publisher_search.py` | ACM and Elsevier records from Crossref and OpenAlex using publisher filters, plus Q5 on OpenAlex, Semantic Scholar and arXiv. These are not searches of the ACM Digital Library or ScienceDirect. |
 | `search_log_browser.csv`, `search_log_publisher.csv` | Date, source, exact string, filters, counts and notes. |
 | `source_counts.csv` | Results reported and records saved per source and query, including the exports done by hand. |
