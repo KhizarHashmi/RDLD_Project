@@ -28,6 +28,12 @@ MODELS = {
     "rfdetr": (str(DATA_ROOT / "finetune" / "rfdetr" / "best"), "RF-DETR (DINOv2-S backbone), fine-tuned on DocLayNet"),
 }
 
+# one fixed colour per detector, shared by every figure
+COLORS = {"yolo": "#4C78A8", "heron": "#F58518", "egret": "#54A24B", "detr": "#E45756",
+          "ddetr": "#72B7B2", "heron101": "#B279A2", "egretxl": "#9D755D", "rfdetr": "#111111"}
+# the three detectors the study started with; kept so results stay comparable with the first analysis
+ORIGINAL = ("yolo", "heron", "egret")
+
 # heron and egret share docling's 17-class space; the first 11 are DocLayNet's
 DOCLING_TO_DOCLAYNET = {
     "caption": "Caption", "footnote": "Footnote", "formula": "Formula",

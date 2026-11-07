@@ -14,6 +14,8 @@ Outputs: RDLD_data/results/p1/baseline/
 Run:
   python scripts/p1_clean_baseline.py
   N_BOOT=200 python scripts/p1_clean_baseline.py     # quicker CI
+  MODELS=detr,ddetr python scripts/p1_clean_baseline.py
+      # chosen detectors only: writes to baseline_ext/, keeps the stored predictions
 """
 import sys
 from pathlib import Path
@@ -34,7 +36,9 @@ from rdld.doclaynet import CATEGORIES, DOC_CATEGORIES, load_coco
 BATCH = 8
 N_BOOT = int(os.getenv("N_BOOT", "1000"))
 OP_THRESHOLDS = (0.3, 0.5)          # operating points for the instability measurement
-OUT = config.out_dir("p1", "baseline")
+SUBSET = os.getenv("MODELS")
+RUN = SUBSET.split(",") if SUBSET else list(detectors.MODELS)
+OUT = config.out_dir("p1", "baseline_ext" if SUBSET else "baseline")
 
 gt = load_coco()
 images = gt["images"]
@@ -48,8 +52,9 @@ def run(det, ims):
     if torch.cuda.is_available():
         torch.cuda.synchronize()
     dets, dropped, t0 = [], Counter(), time.time()
-    for i in range(0, len(ims), BATCH):
-        chunk = ims[i:i + BATCH]
+    bs = getattr(det, "batch", BATCH)
+    for i in range(0, len(ims), bs):
+        chunk = ims[i:i + bs]
         pil = [Image.open(config.IMAGES / im["file_name"]).convert("RGB") for im in chunk]
         for p, im in zip(det.predict(pil), chunk):
             dets.extend(detectors.to_coco_results(p, im["id"]))
@@ -60,7 +65,8 @@ def run(det, ims):
 
 
 summary, per_class, per_cat, instab, boots = [], [], [], [], []
-for key, (model_id, family) in detectors.MODELS.items():
+for key in RUN:
+    model_id, family = detectors.MODELS[key]
     print(f"\n=== {key}  {model_id}  ({family})")
     det = detectors.load(key)
     if torch.cuda.is_available():
@@ -70,7 +76,8 @@ for key, (model_id, family) in detectors.MODELS.items():
 
     pdir = config.PREDICTIONS / key
     pdir.mkdir(parents=True, exist_ok=True)
-    (pdir / "clean.json").write_text(json.dumps(dets), encoding="utf-8")
+    if not SUBSET:          # a subset run must not replace predictions the later phases were scored on
+        (pdir / "clean.json").write_text(json.dumps(dets), encoding="utf-8")
 
     # --- accuracy
     r = evaluation.coco_map(gt, dets)
@@ -146,18 +153,18 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 order = sorted(CATEGORIES.values(), key=lambda c: -gt_counts[c])
-piv = PC.pivot(index="class", columns="model", values="AP").loc[order, list(detectors.MODELS)]
+piv = PC.pivot(index="class", columns="model", values="AP").loc[order, RUN]
 fig, ax = plt.subplots(figsize=(11, 4.6), dpi=160)
-piv.plot.bar(ax=ax, width=0.8, color=["#4C78A8", "#F58518", "#54A24B"])
+piv.plot.bar(ax=ax, width=0.8, color=[detectors.COLORS[m] for m in RUN])
 ax.set_xticklabels([f"{c}\n(n={gt_counts[c]})" for c in order], rotation=0, fontsize=8)
 ax.set_ylabel("AP@[.5:.95]"); ax.set_xlabel(""); ax.set_ylim(0, 1)
 ax.set_title("P1 clean baseline — per-class AP on 300 DocLayNet pages")
 ax.spines[["top", "right"]].set_visible(False); ax.legend(title="detector", frameon=False)
 plt.tight_layout(); plt.savefig(OUT / "fig_per_class_ap.png", facecolor="white"); plt.close()
 
-piv = PK.pivot(index="doc_category", columns="model", values="mAP")[list(detectors.MODELS)]
+piv = PK.pivot(index="doc_category", columns="model", values="mAP")[RUN]
 fig, ax = plt.subplots(figsize=(9, 4.2), dpi=160)
-piv.plot.bar(ax=ax, width=0.8, color=["#4C78A8", "#F58518", "#54A24B"])
+piv.plot.bar(ax=ax, width=0.8, color=[detectors.COLORS[m] for m in RUN])
 ax.set_xticklabels([c.replace("_", "\n") for c in piv.index], rotation=0, fontsize=8)
 ax.set_ylabel("mAP@[.5:.95]"); ax.set_xlabel(""); ax.set_ylim(0, 1)
 ax.set_title("P1 clean baseline — mAP by document category (50 pages each)")

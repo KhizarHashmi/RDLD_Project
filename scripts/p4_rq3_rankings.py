@@ -71,6 +71,8 @@ def main():
 
     # ---------------------------------------------------------------- 2. rank agreement
     clean_rank = np.argsort(np.argsort([-X[(m, "clean")][0] for m in MODELS]))
+    orig = list(detectors.ORIGINAL)
+    orig_clean = [X[(m, "clean")][0] for m in orig]
     clean_boot = np.stack([X[(m, "clean")][1:] for m in MODELS])
     ranks = []
     for r in configs.itertuples():
@@ -82,6 +84,9 @@ def main():
                       **{f"mAP_{m}": v for m, v in zip(MODELS, full)},
                       "order": ">".join(np.array(MODELS)[np.argsort([-v for v in full])]),
                       "kendall_tau_vs_clean": float(kendalltau(clean_rank, rk).statistic),
+                      "order_original3": ">".join(sorted(orig, key=lambda m: -X[(m, r.config)][0])),
+                      "kendall_tau_original3_vs_clean": float(kendalltau(
+                          orig_clean, [X[(m, r.config)][0] for m in orig]).statistic),
                       "boot_share_same_order_as_clean": float(same)})
     RK = pd.DataFrame(ranks)
     RK.to_csv(OUT / "rank_agreement.csv", index=False)
@@ -126,6 +131,9 @@ def main():
     print(rv.groupby(["m1", "m2", "kind"]).size().to_string() if len(rv) else "  none")
     print(f"\nmean Kendall tau vs clean: singles {RK[RK.kind == 'single'].kendall_tau_vs_clean.mean():.3f}, "
           f"pairs {RK[RK.kind == 'pair'].kendall_tau_vs_clean.mean():.3f}")
+    print(f"mean Kendall tau vs clean, original 3 detectors: "
+          f"singles {RK[RK.kind == 'single'].kendall_tau_original3_vs_clean.mean():.3f}, "
+          f"pairs {RK[RK.kind == 'pair'].kendall_tau_original3_vs_clean.mean():.3f}")
     print("\nrobustness ranking, single vs compound benchmark (mean retention %):")
     print(B.pivot(index="model", columns="benchmark", values=["mean_retention_pct", "rank"]).round(2).to_string())
     print("\nretention gap between models, single vs compound benchmark:")
@@ -133,9 +141,11 @@ def main():
     print("\nSpearman correlation of per-config mAP drops between models:\n", fail_corr.round(3).to_string())
 
     # ---------------------------------------------------------------- figure
-    fig, axes = plt.subplots(1, 3, figsize=(13, 4.4), dpi=160)
+    pairs_m = list(combinations(MODELS, 2))
+    ncol = min(7, len(pairs_m)); nrow = int(np.ceil(len(pairs_m) / ncol))
+    fig, axes = plt.subplots(nrow, ncol, figsize=(3.2 * ncol, 3.2 * nrow), dpi=130, squeeze=False)
     kc = {"clean": "black", "single": "#4C78A8", "pair": "#E45756"}
-    for ax, (m1, m2) in zip(axes, combinations(MODELS, 2)):
+    for ax, (m1, m2) in zip(axes.flat, pairs_m):
         for kind in ("single", "pair", "clean"):
             h = RK[RK.kind == kind]
             ax.scatter(h[f"mAP_{m2}"], h[f"mAP_{m1}"], s=40 if kind == "clean" else 10,
@@ -145,7 +155,9 @@ def main():
         ax.plot(lim, lim, "k--", lw=0.8)
         ax.set_xlabel(f"{m2} mAP"); ax.set_ylabel(f"{m1} mAP")
         ax.spines[["top", "right"]].set_visible(False)
-    axes[0].legend(frameon=False, fontsize=8)
+    for ax in axes.flat[len(pairs_m):]:
+        ax.axis("off")
+    axes[0, 0].legend(frameon=False, fontsize=8)
     fig.suptitle("Model vs model across all configurations (crossing the diagonal = ranking change)", fontsize=11)
     plt.tight_layout(); plt.savefig(OUT / "fig_model_vs_model.png", facecolor="white"); plt.close()
     print(f"\nwritten -> {OUT}")

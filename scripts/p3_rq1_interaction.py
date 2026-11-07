@@ -177,7 +177,8 @@ def main():
 
 
 def figures(S, R, PR):
-    cols = {"yolo": "#4C78A8", "heron": "#F58518", "egret": "#54A24B"}
+    cols = detectors.COLORS
+    models = list(detectors.MODELS)
     # 1. single-degradation curves
     fig, axes = plt.subplots(2, 4, figsize=(13, 5.6), dpi=160, sharey=True)
     for ax, d in zip(axes.flat, DEG_ORDER):
@@ -195,9 +196,9 @@ def figures(S, R, PR):
 
     # 2. interaction heat maps, multiplicative null
     n = len(DEG_ORDER)
-    fig, axes = plt.subplots(3, 3, figsize=(13, 12), dpi=150)
+    fig, axes = plt.subplots(len(models), 3, figsize=(13, 4 * len(models)), dpi=150, squeeze=False)
     vmax = np.nanpercentile(np.abs(R.I_mult), 98)
-    for i, m in enumerate(detectors.MODELS):
+    for i, m in enumerate(models):
         for j, s in enumerate((1, 2, 3)):
             ax = axes[i, j]
             M = np.full((n, n), np.nan); sig = np.zeros((n, n), bool)
@@ -216,9 +217,10 @@ def figures(S, R, PR):
     plt.savefig(OUT / "fig_interaction_heatmaps.png", facecolor="white", bbox_inches="tight"); plt.close()
 
     # 3. observed vs predicted pair drop
-    fig, axes = plt.subplots(1, 3, figsize=(13, 4.4), dpi=160, sharex=True, sharey=True)
+    ncol = min(4, len(models)); nrow = int(np.ceil(len(models) / ncol))
+    fig, axes = plt.subplots(nrow, ncol, figsize=(3.4 * ncol, 3.8 * nrow), dpi=160, sharex=True, sharey=True, squeeze=False)
     sev_c = {1: "#9ecae1", 2: "#4292c6", 3: "#08519c"}
-    for ax, m in zip(axes, detectors.MODELS):
+    for ax, m in zip(axes.flat, models):
         g = R[R.model == m]
         for s in (1, 2, 3):
             h = g[g.severity == s]
@@ -227,7 +229,9 @@ def figures(S, R, PR):
         ax.plot(lim, lim, "k--", lw=0.8)
         ax.set_title(m); ax.set_xlabel("predicted drop, multiplicative null (pts)")
         ax.spines[["top", "right"]].set_visible(False)
-    axes[0].set_ylabel("observed pair drop (pts)"); axes[0].legend(frameon=False, fontsize=8)
+    for row in axes:
+        row[0].set_ylabel("observed pair drop (pts)")
+    axes[0, 0].legend(frameon=False, fontsize=8)
     fig.suptitle("Points above the line compound beyond the independent-damage prediction", fontsize=11)
     plt.tight_layout(); plt.savefig(OUT / "fig_observed_vs_predicted.png", facecolor="white"); plt.close()
 

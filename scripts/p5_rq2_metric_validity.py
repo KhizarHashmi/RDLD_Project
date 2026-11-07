@@ -88,7 +88,8 @@ def main():
             k = np.array([mm == m for mm, _ in keys])
             u_clean = u[k & (sev_of == 0)][0]
             m_clean = base_map[k & (sev_of == 0)][0]
-            drop_ratio.append(np.mean((u_clean - u[k & (sev_of == 3)]) / np.maximum(m_clean - base_map[k & (sev_of == 3)], 1e-9)))
+            # ratio of mean drops: some configs score above clean, so per-config ratios are unstable
+            drop_ratio.append(np.mean(u_clean - u[k & (sev_of == 3)]) / np.mean(m_clean - base_map[k & (sev_of == 3)]))
         sens.append({"gap_clean": g[sev_of == 0].mean(), "gap_sev3": g[sev_of == 3].mean(),
                      "uw_over_map_drop_sev3": float(np.mean(drop_ratio))})
     SE = pd.DataFrame(sens)
@@ -187,7 +188,7 @@ def main():
     print(TH.round(4).to_string(index=False))
 
     # ---------------------------------------------------------------- figures
-    cols = {"yolo": "#4C78A8", "heron": "#F58518", "egret": "#54A24B"}
+    cols = detectors.COLORS
     fig, axes = plt.subplots(1, 3, figsize=(13, 4.2), dpi=160)
     for ax, t, lab in zip(axes, ["WER", "text_recall", "table_recall"], ["WER (lower better)", "text recall", "table-text recall"]):
         for m in models:
