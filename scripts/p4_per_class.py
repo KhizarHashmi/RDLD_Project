@@ -102,7 +102,7 @@ def main():
     ax.set_xticks(range(len(DEG_ORDER)), DEG_ORDER, rotation=40, fontsize=8)
     ax.set_yticks(range(len(CLASSES)), [f"{c}{' (n=6)' if c == 'Title' else ''}" for c in CLASSES], fontsize=8)
     fig.colorbar(imh, ax=ax, label="AP drop (points)")
-    ax.set_title("Per-class AP drop at severity 3 (mean of 3 detectors)")
+    ax.set_title(f"Per-class AP drop at severity 3 (mean of {len(models)} detectors)")
     plt.tight_layout(); plt.savefig(OUT / "fig_class_by_degradation.png", facecolor="white"); plt.close()
     print(f"\nwritten -> {OUT}")
 

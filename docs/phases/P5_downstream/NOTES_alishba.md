@@ -1,6 +1,6 @@
 # P5 - Downstream Link - Alishba (Workstream A)
 
-**Dates:** 2026-11-04
+**Dates:** 2026-11-04 (results updated to all eight detectors on 2026-11-08)
 
 ## 1. Goal
 Build the downstream pipeline that RQ2 needs: page → layout regions → text in reading order, and measure
@@ -13,7 +13,11 @@ constant so that every difference is caused by layout alone.
 |---|---|---|
 | OCR + region pipeline + scoring | `WORKERS=12 OMP_THREAD_LIMIT=1 python scripts/p5_ocr_downstream.py` | `RDLD_data/ocr/<config>/<page>.json` (cached words), `RDLD_data/results/p5/downstream/{downstream_pages.csv, downstream_configs.csv}` |
 
-Log: `RDLD_data/results/p5/logs/p5_ocr_downstream.log`.
+Logs: `RDLD_data/results/p5/logs/p5_ocr_downstream.log` (first three detectors) and
+`p5_ocr_downstream_8det.log` (all eight).
+
+**Detectors:** YOLO, heron, egret, heron101, egretxl, DETR, Deformable DETR and RF-DETR. The numbers for
+the first three are the same as in the first run.
 
 **Pipeline.** Tesseract 5.5.3 (`--psm 3`, English) reads each page **once** per condition; its words are
 assigned to regions by word centre. Two pipelines then read the *same words from the same image*:
@@ -31,7 +35,7 @@ Picture regions are not read; a word inside two regions is read twice (as croppi
 - **table recall** - share of words inside GT Tables that are read by a predicted Table region
 
 Scope: all 300 pages × 37 conditions (clean + every severity-2 single and pair) = 11,100 OCR passes,
-× 3 detectors.
+× 8 detectors.
 
 ## 3. Results (evidence)
 
@@ -39,14 +43,22 @@ Scope: all 300 pages × 37 conditions (clean + every severity-2 single and pair)
 
 | Detector | mAP (P1) | WER | text recall | text precision | table recall |
 |---|---|---|---|---|---|
-| YOLO | 68.8 | **0.022** | 0.987 | **0.994** | 0.882 |
+| YOLO | 68.8 | **0.022** | 0.987 | 0.994 | 0.882 |
 | heron | 64.2 | 0.112 | 0.954 | 0.938 | 0.763 |
 | egret | 61.5 | 0.102 | 0.955 | 0.946 | 0.715 |
+| heron101 | 65.9 | 0.098 | 0.952 | 0.952 | 0.702 |
+| egretxl | 62.3 | 0.105 | 0.955 | 0.942 | 0.711 |
+| DETR | 53.0 | 0.185 | 0.987 | 0.858 | **0.891** |
+| Deformable DETR | 66.2 | 0.058 | 0.948 | **0.999** | 0.779 |
+| RF-DETR | 48.9 | 0.084 | 0.947 | 0.975 | 0.795 |
 
-At the operating threshold all three label ≈ 88% of regions correctly (P4), and their mAPs differ by at
-most 7 points - but **YOLO's WER is 5× lower** than the transformers'. Their lower text precision is the
-P1 hedging effect arriving downstream: duplicate boxes on the same region make the pipeline read the same
-text twice.
+**YOLO's WER is 4–5× lower** than the four Docling models' (0.098–0.112), even though their mAPs differ by
+at most 7 points. Low text precision is the P1 hedging effect arriving downstream: duplicate boxes on the
+same region make the pipeline read the same text twice. The detectors with the fewest duplicate boxes (P4)
+have the highest text precision - Deformable DETR (no duplicates, precision 0.999) and YOLO - and DETR, with
+the most duplicates, has the lowest precision (0.858) and the highest WER (0.185) although it reads almost
+every word (recall 0.987). WER does not follow mAP: RF-DETR has the lowest mAP (48.9) but a lower WER than
+any Docling model.
 
 ### 3.2 Severity-2 means (`downstream_configs.csv`)
 
@@ -58,10 +70,24 @@ text twice.
 | heron | pair | 0.198 | 0.938 | 0.880 | 0.515 |
 | egret | single | 0.155 | 0.945 | 0.910 | 0.598 |
 | egret | pair | 0.229 | 0.895 | 0.882 | 0.442 |
+| heron101 | single | 0.133 | 0.953 | 0.921 | 0.618 |
+| heron101 | pair | 0.181 | 0.935 | 0.893 | 0.477 |
+| egretxl | single | 0.153 | 0.941 | 0.912 | 0.615 |
+| egretxl | pair | 0.220 | 0.902 | 0.883 | 0.467 |
+| DETR | single | 0.262 | 0.951 | 0.827 | 0.781 |
+| DETR | pair | 0.367 | 0.876 | 0.793 | 0.635 |
+| Deformable DETR | single | 0.257 | 0.748 | 0.997 | 0.535 |
+| Deformable DETR | pair | 0.445 | **0.560** | 0.995 | 0.345 |
+| RF-DETR | single | 0.151 | 0.882 | 0.968 | 0.703 |
+| RF-DETR | pair | 0.232 | **0.803** | 0.959 | 0.585 |
 
-The P4 prediction holds: **YOLO, which fails by *missing* regions, loses text recall** (0.987 → 0.775 on
-pairs); **the transformers, which fail by *merging*, keep recall** (≥ 0.89) and lose order and precision
-instead. On compound degradation the three end with similar WER (0.20–0.23) for different reasons.
+The P4 prediction holds for all eight detectors. **The detectors that fail by *missing* regions lose text
+recall** on pairs: YOLO 0.987 → 0.775, Deformable DETR 0.948 → 0.560, RF-DETR 0.947 → 0.803. **The four
+Docling models, which fail by *merging*, keep recall** (≥ 0.89) and lose order and precision instead.
+DETR, which does both, loses some of each and has the lowest precision (0.793). On compound degradation
+YOLO, RF-DETR and the Docling models end with similar WER (0.18–0.23) for different reasons; DETR (0.367)
+and Deformable DETR (0.445) are clearly worse. Deformable DETR has the second-lowest WER on clean pages and
+the highest on pairs.
 
 ### 3.3 OCR coverage
 Pages where Tesseract returns no words at all: clean 7 / 300 (white text on photographs, picture-only
@@ -90,9 +116,11 @@ aggregates; both pipelines see the same (empty) word set, so they cannot bias th
 - Tesseract cannot read light text on photographs; affected pages are excluded by weighting (§3.3).
 
 ## 6. Main takeaway
-Downstream outcome for RQ2. The failure *type* found in P4 predicts the downstream *symptom*:
-missed regions → lost text (YOLO recall 0.78 on pairs); merged regions → wrong order and duplicated text
-(transformers' precision 0.88). Similar WERs can hide different failures.
+Downstream outcome for RQ2. The failure *type* found in P4 predicts the downstream *symptom* for all eight
+detectors: missed regions → lost text (recall on pairs 0.56–0.80 for YOLO, Deformable DETR and RF-DETR);
+merged regions → wrong order and duplicated text (Docling models' precision 0.88–0.89). Similar WERs can
+hide different failures, and neither clean mAP nor clean WER predicts which detector holds up downstream
+under compound degradation.
 
 ## 7. Hand-off
 - P5 (Khizar): `downstream_configs.csv` → correlation of each layout metric with WER / recall / precision /
