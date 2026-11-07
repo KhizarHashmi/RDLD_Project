@@ -125,9 +125,13 @@ and 0.452 on pairs (0.671 and 0.464 with Title, controls excluded). The findings
 
 ## 7. Open methodology checks
 1. Results with and without RF-DETR.
-2. Whether to repeat the main results on the official DocLayNet test split. This needs a download and GPU time, so it is a decision for the team.
-3. Bootstrap interval method. Some intervals are lopsided around the estimate (tau gap 0.207 [0.131, 0.243]), so consider BCa.
+2. Repeat the main results on 300 pages from the official DocLayNet test split (decided 2026-11-07). About 14–18 hours with the added detectors.
+3. BCa bootstrap intervals (decided 2026-11-07). Some percentile intervals are lopsided around the estimate (tau gap 0.207 [0.131, 0.243]).
 4. Sensitivity of the structural and OCR analyses to the fixed 0.5 score threshold.
 5. Damage as a confound in RQ1 and RQ2, as tested for RQ3.
 6. Deformable DETR clean mAP is 66.20 from the stored predictions and 66.17 in the baseline rerun. Small, but find out why.
 7. Reproducibility: pinned versions, one-command rerun, per-condition results, and release of the RF-DETR weights after a licence check.
+8. Add YOLO26 large, YOLOv11 medium and YOLOv11 large from `hantian/yolo-doclaynet` (decided 2026-11-07). With the current YOLO26 medium this
+   gives size × generation. Check the author's training settings per version first; the weights are AGPL-3.0.
+
+Order: add the YOLO models, then the official test split, then items 1, 3, 4 and 5 once the detectors and pages are final.
