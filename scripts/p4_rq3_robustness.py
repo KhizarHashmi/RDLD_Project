@@ -7,8 +7,8 @@ bootstraps on the shared resample index. Pixel no-op controls (defocus@1) are le
 a column says otherwise.
 
   1. Tau gap. Mean Kendall tau vs the clean order, singles minus pairs, with a 95% CI.
-     Run on all detectors, on distinct architectures only (no scale siblings), and on the
-     original three.
+     Run on all detectors, on distinct architectures only (no scale siblings), on the
+     original three, without RF-DETR, and on the first eight (before the added YOLO models).
   2. Damage control. Pairs damage pages more than singles, so a lower tau could only mean
      "more damage". Fits tau on is_pair plus mean retention in each resample, once linear in
      retention and once with retention bands; the is_pair coefficient is the pair effect at
@@ -33,18 +33,19 @@ from itertools import combinations
 import numpy as np
 import pandas as pd
 
-from rdld import config, detectors
+from rdld import config, detectors, intervals
 
 BOOT = config.RESULTS / "p3" / "boot"
 OUT = config.out_dir("p4", "rq3_robustness")
 ALPHA = 0.05
-SIBLINGS = ("heron101", "egretxl")      # same architectures as heron and egret, at another scale
+SIBLINGS = ("heron101", "egretxl",      # same architectures as heron and egret, at another scale
+            "yolo26l", "yolo11m", "yolo11l")   # the YOLO family counts once, as yolo (yolo26m)
 BANDS = [(0.0, 0.5), (0.5, 0.7), (0.7, 0.85), (0.85, 0.95), (0.95, 1.01)]
 
 
 def load(m, c):
-    with np.errstate(all="ignore"):
-        return 100 * np.nanmean(np.load(BOOT / m / f"{c}.npy"), axis=1)     # (N_BOOT+1,), row 0 = full corpus
+    with np.errstate(all="ignore"):     # row 0 = full corpus, then bootstrap rows, then jackknife rows if built
+        return 100 * np.nanmean(intervals.load_rows(m, c), axis=1)
 
 
 def tau_vs(A, B):
@@ -56,8 +57,12 @@ def tau_vs(A, B):
 
 
 def ci(v):
-    lo, hi = np.percentile(v[1:], [2.5, 97.5])
-    return float(v[0]), float(lo), float(hi)
+    return intervals.percentile_ci(v)
+
+
+def bca(v):
+    lo, hi = intervals.bca_ci(v)
+    return {"lo_bca": lo, "hi_bca": hi}
 
 
 def bh(p):
@@ -77,7 +82,11 @@ def main():
     is_control = (configs.severity == 1) & ((configs.a == "defocus") | (configs.b == "defocus"))
     test = configs[(configs.kind != "clean") & ~is_control].reset_index(drop=True)
     sets = {"all": models, "distinct_architectures": [m for m in models if m not in SIBLINGS],
-            "original3": list(detectors.ORIGINAL)}
+            "original3": list(detectors.ORIGINAL),
+            # RF-DETR was fine-tuned by us on one sixth of the training split: is any claim carried by it?
+            "without_rfdetr": [m for m in models if m != "rfdetr"],
+            # the eight detectors reported before the YOLO size x generation set was added
+            "first8": [m for m in models if m not in ("yolo26l", "yolo11m", "yolo11l")]}
 
     # ---------------------------------------------------------------- 1 and 2
     gaps, damage, sev_rows, band_rows = [], [], [], []
@@ -89,7 +98,7 @@ def main():
         ts, tp = T[single].mean(axis=0), T[pair].mean(axis=0)
         g, lo, hi = ci(ts - tp)
         gaps.append({"detectors": name, "n_detectors": len(ms), "tau_single": ts[0], "tau_pair": tp[0],
-                     "gap": g, "lo": lo, "hi": hi, "excludes_zero": bool(lo > 0 or hi < 0)})
+                     "gap": g, "lo": lo, "hi": hi, "excludes_zero": bool(lo > 0 or hi < 0), **bca(ts - tp)})
 
         coef = np.empty(T.shape[1])
         for b in range(T.shape[1]):
@@ -97,7 +106,7 @@ def main():
             coef[b] = np.linalg.lstsq(D, T[:, b], rcond=None)[0][2]
         p, lo, hi = ci(coef)
         damage.append({"detectors": name, "estimator": "linear in retention", "pair_effect_at_equal_damage": p,
-                       "lo": lo, "hi": hi, "excludes_zero": bool(lo > 0 or hi < 0)})
+                       "lo": lo, "hi": hi, "excludes_zero": bool(lo > 0 or hi < 0), **bca(coef)})
         # tau is not linear in retention, so also compare the two kinds within retention bands
         edges = [b[0] for b in BANDS[1:]]
         for b in range(T.shape[1]):
@@ -106,7 +115,7 @@ def main():
             coef[b] = np.linalg.lstsq(D, T[:, b], rcond=None)[0][-1]
         p, lo, hi = ci(coef)
         damage.append({"detectors": name, "estimator": "within retention bands", "pair_effect_at_equal_damage": p,
-                       "lo": lo, "hi": hi, "excludes_zero": bool(lo > 0 or hi < 0)})
+                       "lo": lo, "hi": hi, "excludes_zero": bool(lo > 0 or hi < 0), **bca(coef)})
 
         for s in (1, 2, 3):
             k = (test.severity == s).to_numpy()
@@ -126,9 +135,10 @@ def main():
     BD = pd.DataFrame(band_rows); BD.to_csv(OUT / "tau_by_retention_band.csv", index=False)
 
     # ---------------------------------------------------------------- 3. noise floor
-    rep = pd.read_csv(config.DEGRADED / "configs_rep.csv")
+    rep_csv = config.DEGRADED / "configs_rep.csv"   # absent on the test-split repeat (no seed replicate)
+    rep = pd.read_csv(rep_csv) if rep_csv.exists() else pd.DataFrame(columns=["base", "kind"])
     floor = []
-    for name, ms in sets.items():
+    for name, ms in sets.items() if len(rep) else []:
         taus = {"single": [], "pair": []}
         for r in rep.itertuples():
             a = np.stack([load(m, r.base) for m in ms])
@@ -150,8 +160,7 @@ def main():
         for r in test.itertuples():
             v = X[(m1, r.config)] - X[(m2, r.config)]
             g, lo, hi = ci(v)
-            b, n = v[1:], len(v) - 1
-            p = min(1.0, 2 * min((np.sum(b <= 0) + 1) / (n + 1), (np.sum(b >= 0) + 1) / (n + 1)))
+            p = intervals.boot_p(v)
             rows.append({"m1": m1, "m2": m2, "config": r.config, "kind": r.kind, "severity": r.severity,
                          "clean_gap": g0[0], "gap": g, "lo": lo, "hi": hi, "p": p,
                          "opposite_sign": bool(np.sign(g) == -np.sign(g0[0])), "ci_excludes_zero": bool(lo > 0 or hi < 0)})
@@ -172,9 +181,10 @@ def main():
                             for m in ms]) for k in ("single", "pair")}
         p, lo, hi = ci(tau_vs(ret["single"], ret["pair"]))
         top_s, top_p = ret["single"].argmax(axis=0), ret["pair"].argmax(axis=0)
+        nb = intervals.n_boot()
         agree.append({"detectors": name, "tau_single_vs_pair_benchmark": p, "lo": lo, "hi": hi,
                       "most_robust_single": ms[top_s[0]], "most_robust_pair": ms[top_p[0]],
-                      "boot_share_top_differs": float(np.mean(top_s[1:] != top_p[1:]))})
+                      "boot_share_top_differs": float(np.mean(top_s[1:1 + nb] != top_p[1:1 + nb]))})
     AG = pd.DataFrame(agree); AG.to_csv(OUT / "benchmark_agreement.csv", index=False)
 
     # ---------------------------------------------------------------- report

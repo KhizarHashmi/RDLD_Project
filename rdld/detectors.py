@@ -26,11 +26,19 @@ MODELS = {
     "egretxl": ("docling-project/docling-layout-egret-xlarge", "D-FINE transformer (x-large)"),
     # fine-tuned in this study (scripts/p7_finetune_rfdetr.py): no released layout checkpoint exists
     "rfdetr": (str(DATA_ROOT / "finetune" / "rfdetr" / "best"), "RF-DETR (DINOv2-S backbone), fine-tuned on DocLayNet"),
+    # YOLO size x generation (added 2026-11-08): with yolo26m this is a 2x2 design
+    "yolo26l": ("hantian/yolo-doclaynet", "YOLO, CNN one-stage (yolo26l)"),
+    "yolo11m": ("hantian/yolo-doclaynet", "YOLO, CNN one-stage (yolov11m)"),
+    "yolo11l": ("hantian/yolo-doclaynet", "YOLO, CNN one-stage (yolov11l)"),
 }
+# weight file per YOLO key; all trained by the author with imgsz=1024 (train.py defaults)
+YOLO_WEIGHTS = {"yolo": "yolo26m-doclaynet.pt", "yolo26l": "yolo26l-doclaynet.pt",
+                "yolo11m": "yolov11m-doclaynet.pt", "yolo11l": "yolov11l-doclaynet.pt"}
 
 # one fixed colour per detector, shared by every figure
 COLORS = {"yolo": "#4C78A8", "heron": "#F58518", "egret": "#54A24B", "detr": "#E45756",
-          "ddetr": "#72B7B2", "heron101": "#B279A2", "egretxl": "#9D755D", "rfdetr": "#111111"}
+          "ddetr": "#72B7B2", "heron101": "#B279A2", "egretxl": "#9D755D", "rfdetr": "#111111",
+          "yolo26l": "#1F3A5F", "yolo11m": "#9ECAE9", "yolo11l": "#6B8FB8"}
 # the three detectors the study started with; kept so results stay comparable with the first analysis
 ORIGINAL = ("yolo", "heron", "egret")
 
@@ -117,10 +125,11 @@ class YOLODetector:
         self.key, self.model_id = key, MODELS[key][0]
         self.threshold, self.imgsz = threshold, imgsz
         hub = os.path.expanduser("~/.cache/huggingface/hub/models--hantian--yolo-doclaynet")
-        weights = glob.glob(os.path.join(hub, "snapshots", "*", "yolo26m-doclaynet.pt"))
+        fname = YOLO_WEIGHTS[key]
+        weights = glob.glob(os.path.join(hub, "snapshots", "*", fname))
         if not weights:
             from huggingface_hub import hf_hub_download
-            weights = [hf_hub_download(self.model_id, "yolo26m-doclaynet.pt")]
+            weights = [hf_hub_download(self.model_id, fname)]
         self.model = YOLO(weights[0])
         self.names = self.model.names
 
@@ -141,7 +150,7 @@ class YOLODetector:
 
 
 def load(key, **kw):
-    return YOLODetector(key, **kw) if key == "yolo" else HFDetector(key, **kw)
+    return YOLODetector(key, **kw) if key in YOLO_WEIGHTS else HFDetector(key, **kw)
 
 
 def to_coco_results(pred, image_id):

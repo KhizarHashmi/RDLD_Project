@@ -13,7 +13,8 @@ The multiplicative null is reported alongside because mAP is bounded: two large
 drops cannot add without passing zero, so the additive null alone would label
 saturation as "sub-additive".
 
-Inference: 95% percentile CI and two-sided p from the paired page bootstrap;
+Inference: 95% percentile CI and two-sided p from the paired page bootstrap, plus a BCa
+interval (columns *_bca) once the jackknife tables from p3_jackknife.py exist;
 Benjamini-Hochberg FDR across the 84 pairs within each detector and null.
 Negative control: defocus@1 is a pixel no-op, so its 7 pairs must give I = 0 exactly.
 
@@ -37,7 +38,7 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-from rdld import config, detectors
+from rdld import config, detectors, intervals
 
 BOOT = config.RESULTS / "p3" / "boot"
 OUT = config.out_dir("p3", "rq1")
@@ -47,17 +48,15 @@ DEG_ORDER = ["texture", "ink_bleeding", "ink_holdout", "speckle", "watermark",
 
 
 def mAP(model, cfg):
-    a = np.load(BOOT / model / f"{cfg}.npy")
+    a = intervals.load_rows(model, cfg)
     with np.errstate(all="ignore"):
-        return np.nanmean(a, axis=1)            # (N_BOOT+1,), row 0 = full corpus
+        return np.nanmean(a, axis=1)            # row 0 = full corpus, then bootstrap rows, then jackknife rows
 
 
 def boot_stats(v):
-    point, b = float(v[0]), v[1:]
-    lo, hi = np.percentile(b, [2.5, 97.5])
-    n = len(b)
-    p = min(1.0, 2 * min((np.sum(b <= 0) + 1) / (n + 1), (np.sum(b >= 0) + 1) / (n + 1)))
-    return point, float(lo), float(hi), p
+    """Point estimate, 95% percentile CI and two-sided p from the bootstrap rows."""
+    point, lo, hi = intervals.percentile_ci(v)
+    return point, lo, hi, intervals.boot_p(v)
 
 
 def bh(p):
@@ -103,7 +102,9 @@ def main():
                    "pred_max": float(max(da[0], db[0]))}
             for name, v in (("add", i_add), ("mult", i_mult)):
                 pt, lo, hi, p = boot_stats(v)
-                row.update({f"I_{name}": pt, f"I_{name}_lo": lo, f"I_{name}_hi": hi, f"p_{name}": p})
+                blo, bhi = intervals.bca_ci(v)
+                row.update({f"I_{name}": pt, f"I_{name}_lo": lo, f"I_{name}_hi": hi, f"p_{name}": p,
+                            f"I_{name}_lo_bca": blo, f"I_{name}_hi_bca": bhi})
             rows.append(row)
 
     S = pd.DataFrame(singles)
