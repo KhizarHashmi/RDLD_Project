@@ -15,7 +15,8 @@ annotated DocLayNet corpus can be built without manual labelling.
 | `scripts/p0_prepare_doclaynet.py` | `python scripts/p0_prepare_doclaynet.py` | `RDLD_data/doclaynet/{images/, annotations.json, manifest.csv}`, log `results/p0/logs/p0_prepare_doclaynet.log` |
 
 Input data: DocLayNet v1.2 validation split (`ds4sd/DocLayNet-v1.2`, 7 parquet shards, 6,489 pages,
-CDLA-Permissive-1.0), cached in `~/.cache/huggingface`.
+CDLA-Permissive-1.0), cached in `~/.cache/huggingface`. The script later gained a `SPLIT` option to extract the second
+page set from the test split with the same rule (P7).
 
 ## 3. Results (evidence)
 

@@ -1,9 +1,10 @@
 """
 p0_prepare_doclaynet.py -- (Alishba, Workstream A) Extract a STRATIFIED DocLayNet subset to disk.
 
-DocLayNet-v1.2 validation split = 6,489 pages across 6 document categories.
+DocLayNet-v1.2 validation split = 6,489 pages (7 shards); test split = 4,999 pages (6 shards);
+both across 6 document categories. SPLIT picks the split (default: validation).
 IMPORTANT: shards are sorted by category, NOT shuffled. Stratified sampling
-therefore requires reading all 7 shards.
+therefore requires reading all shards of the split.
 
 Outputs a COCO-format dataset ready for detection + perturbation:
 
@@ -15,6 +16,7 @@ Outputs a COCO-format dataset ready for detection + perturbation:
 Run:
   python scripts/p0_prepare_doclaynet.py                # 300 pages, 50/category
   N_PER_CATEGORY=100 python scripts/p0_prepare_doclaynet.py
+  RDLD_DATA=<test data root> SPLIT=test python scripts/p0_prepare_doclaynet.py   # official test pages
 """
 import sys
 from pathlib import Path
@@ -34,17 +36,20 @@ from rdld.doclaynet import CATEGORIES
 IMGDIR.mkdir(parents=True, exist_ok=True)
 
 N_PER_CAT = int(os.getenv("N_PER_CATEGORY", "50"))
+SPLIT = os.getenv("SPLIT", "validation")
+if SPLIT not in ("validation", "test"):
+    raise SystemExit(f"SPLIT must be validation or test, not {SPLIT!r}")
 
 CACHE = Path(os.path.expanduser("~")) / ".cache" / "huggingface" / "hub"
 shards = sorted(glob.glob(str(CACHE / "datasets--ds4sd--DocLayNet-v1.2" /
-                              "snapshots" / "*" / "data" / "validation-*.parquet")))
+                              "snapshots" / "*" / "data" / f"{SPLIT}-*.parquet")))
 if not shards:
-    raise SystemExit("No validation shards found. Download them first (see RUNBOOK).")
+    raise SystemExit(f"No {SPLIT} shards found. Download them first (see RUNBOOK).")
 
 print("=" * 70)
 print(" DOCLAYNET STRATIFIED EXTRACTION")
 print("=" * 70)
-print(f"\n{len(shards)} shards  |  target {N_PER_CAT} pages/category "
+print(f"\n{SPLIT} split, {len(shards)} shards  |  target {N_PER_CAT} pages/category "
       f"({N_PER_CAT*6} total)\n")
 
 taken = collections.Counter()
@@ -58,7 +63,7 @@ for sp in shards:
             "laws_and_regulations", "manuals", "patents"]):
         break
 
-    shard_name = sp.split("validation-")[1][:5]
+    shard_name = sp.split(f"{SPLIT}-")[1][:5]
     print(f"--- shard {shard_name}")
     tbl = pq.read_table(sp, columns=["image", "bboxes", "category_id",
                                      "area", "metadata"])
@@ -111,7 +116,7 @@ for sp in shards:
 coco = {
     "info": {
         "description": "DocLayNet stratified subset for compound-degradation study",
-        "source": "ds4sd/DocLayNet-v1.2 validation split",
+        "source": f"ds4sd/DocLayNet-v1.2 {SPLIT} split",
         "license": "CDLA-Permissive-1.0",
     },
     "images": images,
