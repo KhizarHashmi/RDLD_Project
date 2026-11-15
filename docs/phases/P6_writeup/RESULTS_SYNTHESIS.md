@@ -22,23 +22,27 @@ predicted regions, severity 2.
 
 ## Clean baseline (P1)
 
-| | Val mAP [95% CI] | Test mAP | correct regions at τ = 0.5 (val / test) | duplicates % of predictions (val / test) | WER (val / test) |
+| | Val mAP [95% CI] | Test mAP [95% CI] | correct regions at τ = 0.5 (val / test) | duplicates % of predictions (val / test) | WER (val / test) |
 |---|---|---|---|---|---|
-| YOLOv11-l | **69.4** [66.6, 72.3] | 72.5 | 84.8 / 82.6 | 0.8 / 0.7 | 0.041 / 0.052 |
-| YOLOv11-m | 68.9 [65.0, 72.6] | 71.3 | 84.8 / 81.9 | 1.1 / 1.4 | 0.063 / 0.060 |
-| YOLO26-m | 68.8 [64.0, 72.5] | 71.4 | 87.8 / 84.2 | 0.6 / 0.7 | **0.022** / **0.029** |
-| YOLO26-l | 68.2 [63.5, 72.2] | **73.1** | 87.9 / 83.4 | 0.5 / 0.4 | 0.035 / 0.040 |
-| Deformable DETR | 66.2 [63.4, 69.7] | 70.4 | 82.2 / 78.4 | 0.0 / 0.1 | 0.058 / 0.072 |
-| heron-101 | 65.9 [62.4, 70.3] | 66.1 | 85.8 / 82.3 | 3.2 / 8.1 | 0.098 / 0.175 |
-| heron | 64.2 [60.4, 68.4] | 65.7 | 87.6 / 81.9 | 5.1 / 7.8 | 0.112 / 0.187 |
-| egret-xlarge | 62.3 [58.5, 66.6] | 63.9 | 88.0 / 82.7 | 4.9 / 8.6 | 0.105 / 0.164 |
-| egret | 61.5 [58.3, 65.8] | 64.4 | 88.0 / 82.6 | 4.5 / 8.2 | 0.102 / 0.171 |
-| DETR | 53.0 [49.3, 57.1] | 41.3 | 83.6 / 75.8 | 5.1 / 7.6 | 0.185 / 0.237 |
-| RF-DETR | 48.9 [45.8, 53.7] | 49.7 | 76.2 / 69.0 | 1.5 / 1.3 | 0.084 / 0.111 |
+| YOLOv11-l | **69.4** [66.7, 72.4] | 72.5 [68.6, 76.0] | 84.8 / 82.6 | 0.8 / 0.7 | 0.041 / 0.052 |
+| YOLOv11-m | 68.9 [64.8, 72.4] | 71.3 [67.7, 74.9] | 84.8 / 81.9 | 1.1 / 1.4 | 0.063 / 0.060 |
+| YOLO26-m | 68.8 [64.2, 72.4] | 71.4 [68.2, 74.9] | 87.8 / 84.2 | 0.6 / 0.7 | **0.022** / **0.029** |
+| YOLO26-l | 68.2 [63.4, 72.1] | **73.1** [69.6, 76.7] | 87.9 / 83.4 | 0.5 / 0.4 | 0.035 / 0.040 |
+| Deformable DETR | 66.2 [63.4, 70.0] | 70.4 [67.8, 73.7] | 82.2 / 78.4 | 0.0 / 0.1 | 0.058 / 0.072 |
+| heron-101 | 65.9 [62.3, 70.3] | 66.1 [63.2, 69.6] | 85.8 / 82.3 | 3.2 / 8.1 | 0.098 / 0.175 |
+| heron | 64.2 [60.6, 68.5] | 65.7 [62.7, 69.3] | 87.6 / 81.9 | 5.1 / 7.8 | 0.112 / 0.187 |
+| egret-xlarge | 62.3 [58.3, 66.9] | 63.9 [61.0, 67.6] | 88.0 / 82.7 | 4.9 / 8.6 | 0.105 / 0.164 |
+| egret | 61.5 [57.9, 65.9] | 64.4 [61.4, 68.1] | 88.0 / 82.6 | 4.5 / 8.2 | 0.102 / 0.171 |
+| DETR | 53.0 [49.2, 57.2] | 41.3 [38.9, 45.2] | 83.6 / 75.8 | 5.1 / 7.6 | 0.185 / 0.237 |
+| RF-DETR | 48.9 [46.0, 53.4] | 49.7 [47.3, 53.9] | 76.2 / 69.0 | 1.5 / 1.3 | 0.084 / 0.111 |
+
+Intervals: 1,000-resample page bootstrap of the same predictions that every other table uses. The baseline script
+runs its own inference pass, which agrees with these predictions within 0.04 mAP points for every detector.
 
 RF-DETR is not like for like because it had far less training data. The four YOLO models are within 1.2 mAP points on
-validation and their order changes between page sets. DETR drops 11.7 points on the test pages, which we have not
-explained. Title has 6 boxes on the validation pages and 19 on the test pages; see P7 notes.
+validation and their order changes between page sets. DETR drops 11.7 points on the test pages. It is lower on five of the six document categories, so a few
+documents do not explain it. Its model card does not name the DocLayNet splits it was trained on, so we cannot rule
+out that it saw validation pages in training. Title has 6 boxes on the validation pages and 19 on the test pages; see P7 notes.
 
 ## RQ1 - Do degradations compound?
 
@@ -51,7 +55,7 @@ the pixels. Holds on both page sets and under both bootstrap schemes.**
    +2.00 on test (egret lowest, egret-xlarge highest). Additive null: most pairs n.s. *(P3-K, P7-K)*
 3. It grows with severity in the heron and egret families and RF-DETR (egret validation s1 → s3: −0.05 → +1.63 → +4.33). The YOLO
    models, DETR and Deformable DETR show no steady rise. *(P3-K)*
-4. Multiplicative null, FDR, 924 cells: super / sub = 228 / 105 (validation, page bootstrap), 188 / 75 (validation,
+4. Multiplicative null, FDR, 847 noncontrol cells per page set: super / sub = 228 / 105 (validation, page bootstrap), 188 / 75 (validation,
    document), 299 / 134 (test, page), 219 / 86 (test, document). Super-additive under **both** nulls: 83 and 57 (validation),
    111 and 61 (test). With 8 detectors: 43 of 616 on validation, page bootstrap. Speckle and blur pairs recur. *(P3-K, P7-K)*
 5. Singles predict pairs well (ρ 0.92–0.99); the multiplicative rule is best for all 11 detectors (MAE 1.0–2.7 points on
@@ -86,7 +90,8 @@ disappears.**
    (0.56–0.80). The heron and egret families mostly merge (+20.5 to +34.0 pp) and keep recall (≥ 0.89). The same split
    holds on the test pages. *(P4-A, P5-A)*
 5. The absolute failure labels depend on the score cut-off (at 0.3 nearly every detector mostly merges, at 0.7 nearly every
-   detector mostly misses), but the relative order holds (rank correlation 0.75–0.94 between cut-offs). State it as
+   detector mostly misses), but the relative order holds (rank correlation of merged − missed with the 0.5 labels: 0.85 at 0.3 and 0.94 at 0.7, and 0.75 between
+   0.3 and 0.7). State it as
    "relatively more merging / missing". *(P7-K)*
 6. At cut-off 0.3 the Docling models and DETR read duplicated text, their WER on pairs rises to 0.62–0.70, and within-condition
    ρ(mAP, WER) falls to −0.00 (ρ(duplicate share, WER) = 0.81). At 0.7: −0.65. *(P7-K)*

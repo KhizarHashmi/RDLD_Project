@@ -78,21 +78,26 @@ ended with no unexpected failures.
 
 ### 3.2 Clean mAP
 
-| Detector | Validation mAP [95% CI] | Test mAP | Test mAP@.5 |
+| Detector | Validation mAP [95% CI] | Test mAP [95% CI] | Test mAP@.5 |
 |---|---|---|---|
-| `yolo11l` | 69.4 [66.6, 72.3] | 72.5 | 87.0 |
-| `yolo11m` | 68.9 [65.0, 72.6] | 71.3 | 85.9 |
-| `yolo` (26m) | 68.8 [64.0, 72.5] | 71.4 | 84.9 |
-| `yolo26l` | 68.2 [63.5, 72.2] | **73.1** | 86.1 |
-| `ddetr` | 66.2 [63.4, 69.7] | 70.4 | 88.4 |
-| `heron101` | 65.9 [62.4, 70.3] | 66.1 | 86.7 |
-| `heron` | 64.2 [60.4, 68.4] | 65.7 | 85.7 |
-| `egretxl` | 62.3 [58.5, 66.6] | 63.9 | 86.4 |
-| `egret` | 61.5 [58.3, 65.8] | 64.4 | 85.6 |
-| `detr` | 53.0 [49.3, 57.1] | **41.3** | 64.5 |
-| `rfdetr` | 48.9 [45.8, 53.7] | 49.7 | 71.4 |
+| `yolo11l` | 69.4 [66.7, 72.4] | 72.5 [68.6, 76.0] | 87.0 |
+| `yolo11m` | 68.9 [64.8, 72.4] | 71.3 [67.7, 74.9] | 85.9 |
+| `yolo` (26m) | 68.8 [64.2, 72.4] | 71.4 [68.2, 74.9] | 84.9 |
+| `yolo26l` | 68.2 [63.4, 72.1] | **73.1** [69.6, 76.7] | 86.1 |
+| `ddetr` | 66.2 [63.4, 70.0] | 70.4 [67.8, 73.7] | 88.4 |
+| `heron101` | 65.9 [62.3, 70.3] | 66.1 [63.2, 69.6] | 86.7 |
+| `heron` | 64.2 [60.6, 68.5] | 65.7 [62.7, 69.3] | 85.7 |
+| `egretxl` | 62.3 [58.3, 66.9] | 63.9 [61.0, 67.6] | 86.4 |
+| `egret` | 61.5 [57.9, 65.9] | 64.4 [61.4, 68.1] | 85.6 |
+| `detr` | 53.0 [49.2, 57.2] | **41.3** [38.9, 45.2] | 64.5 |
+| `rfdetr` | 48.9 [46.0, 53.4] | 49.7 [47.3, 53.9] | 71.4 |
 
-Most detectors score higher on the test pages. DETR drops 11.7 points, which we have not explained. The clean order
+Intervals: 1,000-resample page bootstrap of the same predictions that every other table uses. The baseline script
+runs its own inference pass, which agrees with these predictions within 0.04 mAP points for every detector.
+
+Most detectors score higher on the test pages. DETR drops 11.7 points. It is lower on five of the six document categories, so a few
+documents do not explain it. Its model card does not name the DocLayNet splits it was trained on, so we cannot rule
+out that it saw validation pages in training. The clean order
 changes between page sets (YOLOv11-l first on validation, YOLO26-l first on test), so the clean ranking of the four
 YOLO models is within noise.
 
@@ -100,12 +105,13 @@ YOLO models is within noise.
 - The multiplicative rule is the best predictor of pairs for all 11 detectors on both page sets (MAE 1.0–2.7 points on
   validation, 1.1–3.0 on test; Spearman 0.92–0.99), and it under-predicts for 10 of 11.
 - Median I_mult per detector: +0.21 to +1.48 on validation, +0.24 to +2.00 on test, positive for every detector.
-- FDR-classified cells, all 924 detector × pair cells:
+- FDR-classified cells, the 847 noncontrol detector × pair cells per page set (the 77 control cells are all n.s.
+  and left out):
 
 | | Page bootstrap | Document bootstrap |
 |---|---|---|
-| Validation, multiplicative null: super / sub / n.s. | 228 / 105 / 591 | 188 / 75 / 661 |
-| Test, multiplicative null: super / sub / n.s. | 299 / 134 / 491 | 219 / 86 / 619 |
+| Validation, multiplicative null: super / sub / n.s. | 228 / 105 / 514 | 188 / 75 / 584 |
+| Test, multiplicative null: super / sub / n.s. | 299 / 134 / 414 | 219 / 86 / 542 |
 | Validation, super under both nulls | 83 | 57 |
 | Test, super under both nulls | 111 | 61 |
 
@@ -218,7 +224,8 @@ depends on the detector set, and we should not claim a fixed threshold.
   within a condition WER follows the duplicate share (ρ 0.81), not mAP. This strengthens the RQ2 finding that mAP is
   blind to duplicates: at a lower cut-off, mAP's link to downstream quality disappears.
 - The absolute failure labels depend on the cut-off: at 0.3 almost every detector mostly merges, at 0.7 almost every
-  detector mostly misses. The relative ordering holds: rank correlation of (merged − missed) between cut-offs is 0.75–0.94,
+  detector mostly misses. The relative ordering holds: rank correlation of (merged − missed) with the 0.5 labels is 0.85 at 0.3 and 0.94 at 0.7
+  (0.75 between 0.3 and 0.7),
   the Docling models are always the most merge-prone and YOLOv11 always the most miss-prone. The exception is Deformable DETR,
   which becomes merge-prone at 0.3. The paper should say "relatively more merging" and "relatively more missing".
 
@@ -272,7 +279,7 @@ depends on the detector set, and we should not claim a fixed threshold.
 | 3 | BCa intervals | Done. Agree for RQ1; used as a check for RQ3 (3.5) |
 | 4 | Score cut-off sensitivity | Done (3.10). Changes the wording of the failure-type claim |
 | 5 | Damage as a confound in RQ1 and RQ2 | Open. RQ2 within-condition analysis already holds damage fixed; RQ1 not yet |
-| 6 | Deformable DETR clean mAP 66.20 vs 66.17 in the baseline rerun | Open, small |
+| 6 | Deformable DETR clean mAP 66.20 vs 66.17 in the baseline rerun | Done. The baseline script runs its own inference pass; the two passes differ by at most 0.04 mAP points for every detector. All tables use the main pipeline's predictions |
 | 7 | Reproducibility: pinned versions, one-command rerun, RF-DETR weights after licence check | Open, before release |
 | 8 | YOLO size × generation | Done (3.8) |
 | 9 | Document-level resampling | Done (2.3, 3.3–3.6) |
