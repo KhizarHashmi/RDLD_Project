@@ -1,4 +1,4 @@
-# RDLD: Robustness of Document Layout Detection Under Compound Degradation
+# RDLD: Robustness of Document Layout Analysis Under Compound Degradation
 
 **Team:** Khizar Mohammad Hashmi (26I-8009), Alishba Abbas (26I-8032). MS Data Science, FAST-NUCES, Fall 2026.
 
