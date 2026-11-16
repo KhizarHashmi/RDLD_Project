@@ -221,7 +221,8 @@ Severity-3 pairs, change in merged − change in missed (percentage points; posi
 A lower cut-off keeps more weak boxes, so more regions are covered by an over-large or duplicate box (merged) and fewer are
 missed; a higher cut-off does the opposite. The absolute labels therefore depend on τ: at 0.3 nearly every detector mostly
 merges, at 0.7 nearly every detector mostly misses. **The relative order holds**: the rank correlation of the column above
-between cut-offs is 0.75–0.94, the Docling models are the most merge-prone and YOLOv11 the most miss-prone at every cut-off.
+with the τ = 0.5 values is 0.85 at 0.3 and 0.94 at 0.7 (0.75 between 0.3 and 0.7),
+the Docling models are the most merge-prone and YOLOv11 the most miss-prone at every cut-off.
 The exception is Deformable DETR, which moves to the merge side at 0.3. The failure-type claim should be stated as "relatively
 more merging" and "relatively more missing", with the cut-off given.
 
