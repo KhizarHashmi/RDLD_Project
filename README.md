@@ -1,4 +1,4 @@
-# RDLD: Robustness of Document Layout Detection Under Compound Degradation
+# RDLD: Robustness of Document Layout Analysis Under Compound Degradation
 
 **Team:** Khizar Mohammad Hashmi (26I-8009), Alishba Abbas (26I-8032). MS Data Science, FAST-NUCES, Fall 2026.
 
@@ -12,14 +12,18 @@
 | RQ2 | Does mAP predict downstream document-reading quality under degradation? |
 | RQ3 | Are clean-condition detector rankings preserved under compound degradation? |
 
-Design: 300 DocLayNet pages (50 from each of 6 categories), with 1 clean, 24 single and 84 pair configurations.
-Degradations are image-only, so ground-truth boxes stay valid. The study started with 3 detectors and is being extended to 8.
+Design: two page sets of 300 DocLayNet pages each (one from the validation split, one from the official test split,
+50 pages from each of 6 categories), each with 1 clean, 24 single and 84 pair configurations. Degradations are
+image-only, so ground-truth boxes stay valid. Eleven detectors from six architecture families are evaluated on every
+condition.
+
+**How to run it:** `docs/PIPELINE.md` lists every script in order, with its inputs, outputs and run time.
 
 ## Branches
 
 | Branch | Holds | Pushed by |
 |---|---|---|
-| `main` | Shared scaffold. Both branches are merged here at the end. | Khizar |
+| `main` | The full code: both person branches merged | Khizar |
 | `khizar` | Detection, evaluation, statistics | Khizar |
 | `alishba` | Data, perturbation, image quality, EDA, OCR | Alishba |
 
@@ -27,10 +31,11 @@ Degradations are image-only, so ground-truth boxes stay valid. The study started
 
 ```
 rdld/             shared package: paths, DocLayNet schema, third-party loader
-scripts/          numbered phase scripts (on the person branches)
+scripts/          numbered phase scripts
 third_party/      RoDLA perturbation code (unchanged) and ocrodeg
 literature_search/ search scripts, log, records and references
 docs/phases/      one folder per phase, one notes file per person
+docs/PIPELINE.md  how to run the pipeline, step by step
 docs/base_paper/  base paper details and links
 figures/          figures from the feasibility stage
 ```
@@ -43,6 +48,8 @@ RDLD_data/degraded/      perturbation cache
 RDLD_data/predictions/   detector output cache
 RDLD_data/results/       metric tables and figures, by phase
 ```
+
+The test page set lives in `../RDLD_data_test/` with the same layout (`RDLD_DATA=../RDLD_data_test`).
 
 ## Environment
 

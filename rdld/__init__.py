@@ -1,1 +1,1 @@
-"""RDLD — Robustness of Document Layout Detection under compound degradation."""
+"""RDLD — Robustness of Document Layout Analysis under compound degradation."""
