@@ -120,6 +120,15 @@ The 11 detector names are `yolo` (YOLO26-m), `yolo26l`, `yolo11m`, `yolo11l`, `h
 
 Times were measured on one RTX 3080 Laptop GPU with 16 logical CPU cores.
 
+### Step 0: Download the data and checkpoints (network)
+```
+python scripts/p0_download_data.py --models
+```
+This fetches the DocLayNet v1.2 shards (all validation and test shards, and the 12 train shards used for RF-DETR) and
+every model checkpoint into the Hugging Face cache, each at the exact revision the paper used. The revision ids are
+listed at the top of the script. On 18 Nov 2026 every one of them was still the latest version on the Hub. Without
+`--models`, the detectors download their checkpoints the first time they run, at whatever revision is then the latest.
+
 ### Step 1: Data (CPU)
 | # | Command | Writes | Time |
 |---|---|---|---|
@@ -205,6 +214,20 @@ shown.
 | Document bootstrap | In a separate data folder whose `doclaynet`, `degraded` and `predictions` link to the real ones: `BOOT_SCHEME=doc` on 5.2, then step 6. The page-bootstrap results stay untouched |
 | RQ1 at equal predicted damage | `p7_rq1_damage_bands.py`, once per data folder (both page sets, page and document bootstrap) |
 | Score cut-off | `TAU=0.3` and `TAU=0.7` on `p4_structural_errors`, `p5_ocr_downstream`, `p5_rq2_metric_validity`. These overwrite the 0.5 folders, so copy those first; the results go to `*_tau0.3` and `*_tau0.7` |
+
+### Reproduction check from a fresh clone
+On 18 Nov 2026 the repository was cloned from GitHub into an empty folder and rebuilt with the steps above. All 44
+comparisons with our results were identical, byte for byte:
+- step 0 and 1.2: both page sets (annotations, manifest and all 300 page images each);
+- step 2.2: the degraded images of 10 pages under all 108 conditions (1,080 images), and `--check`;
+- step 5.2: the bootstrap resample index and three bootstrap tables;
+- step 5.1: rescoring all 1,199 prediction files (`metrics_long.csv`, `mrd.csv`);
+- step 6 and the damage-band check: all 32 output tables of `p3_rq1_interaction`, `p4_rq3_rankings`,
+  `p4_rq3_robustness`, `p5_rq2_metric_validity` and `p7_rq1_damage_bands`.
+
+The GPU steps (inference, image quality, RF-DETR training) were not repeated in this check. Inference is close to
+deterministic: a repeat on 48 pages gave identical predictions, and a second full clean pass agreed within 0.04 mAP
+points.
 
 ---
 
