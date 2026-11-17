@@ -215,6 +215,20 @@ shown.
 | RQ1 at equal predicted damage | `p7_rq1_damage_bands.py`, once per data folder (both page sets, page and document bootstrap) |
 | Score cut-off | `TAU=0.3` and `TAU=0.7` on `p4_structural_errors`, `p5_ocr_downstream`, `p5_rq2_metric_validity`. These overwrite the 0.5 folders, so copy those first; the results go to `*_tau0.3` and `*_tau0.7` |
 
+### Reproduction check from a fresh clone
+On 18 Nov 2026 the repository was cloned from GitHub into an empty folder and rebuilt with the steps above. All 44
+comparisons with our results were identical, byte for byte:
+- step 0 and 1.2: both page sets (annotations, manifest and all 300 page images each);
+- step 2.2: the degraded images of 10 pages under all 108 conditions (1,080 images), and `--check`;
+- step 5.2: the bootstrap resample index and three bootstrap tables;
+- step 5.1: rescoring all 1,199 prediction files (`metrics_long.csv`, `mrd.csv`);
+- step 6 and the damage-band check: all 32 output tables of `p3_rq1_interaction`, `p4_rq3_rankings`,
+  `p4_rq3_robustness`, `p5_rq2_metric_validity` and `p7_rq1_damage_bands`.
+
+The GPU steps (inference, image quality, RF-DETR training) were not repeated in this check. Inference is close to
+deterministic: a repeat on 48 pages gave identical predictions, and a second full clean pass agreed within 0.04 mAP
+points.
+
 ---
 
 ## 4. Where each paper number comes from
