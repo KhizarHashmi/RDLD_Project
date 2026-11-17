@@ -4,20 +4,83 @@
 
 **Base paper:** RoDLA, CVPR 2024. [DOI](https://doi.org/10.1109/CVPR52733.2024.01473). Details in `docs/base_paper/README.md`.
 
-## Research questions
+## What the study does
+
+Layout robustness benchmarks apply one image degradation at a time. Real scans and photos usually carry several at
+once. We apply eight image-only RoDLA degradations alone and in all same-severity pairs, at three severities, to two
+sets of 300 DocLayNet pages (one from the validation split, one from the official test split, 50 pages from each of 6
+categories). That gives 109 conditions per page set: 1 clean, 24 single and 84 pair. Eleven layout detectors from six
+architecture families are evaluated on every condition. Degradations are image-only, so the ground-truth boxes stay
+valid.
 
 | RQ | Question |
 |---|---|
-| RQ1 | Do document-image degradations combine additively, or compound super-additively? `I = ΔmAP(A+B) − [ΔmAP(A) + ΔmAP(B)]` |
-| RQ2 | Does mAP predict downstream document-reading quality under degradation? |
-| RQ3 | Are clean-condition detector rankings preserved under compound degradation? |
+| RQ1 | Do degradations combine additively, or do they compound? For a pair A+B, the interaction compares the pair's mAP loss with an additive null, `I_add = D(A+B) − D(A) − D(B)`, and a multiplicative null, `I_mult = 100 [R(A) R(B) − R(A+B)]` (D = drop, R = retention). |
+| RQ2 | Does mAP predict the quality of the text a downstream reader extracts under degradation? |
+| RQ3 | Are clean-condition detector rankings preserved under single and compound degradation? |
 
-Design: two page sets of 300 DocLayNet pages each (one from the validation split, one from the official test split,
-50 pages from each of 6 categories), each with 1 clean, 24 single and 84 pair configurations. Degradations are
-image-only, so ground-truth boxes stay valid. Eleven detectors from six architecture families are evaluated on every
-condition.
+## Where to start
 
-**How to run it:** `docs/PIPELINE.md` lists every script in order, with its inputs, outputs and run time.
+| If you want to | Read |
+|---|---|
+| See the results, phase by phase, without running anything | `explanation_guide/` (notebook with stored outputs, and the same as a PDF) |
+| Reproduce the study or run it locally | **`docs/PIPELINE.md`**, the full run order, with every command, its outputs and its run time |
+| Understand a specific number | `docs/phases/P*/NOTES_khizar.md` and `NOTES_alishba.md`, and `docs/phases/P6_writeup/RESULTS_SYNTHESIS.md` |
+
+## Reproducing the study
+
+Everything needed to rebuild the results is in this repository, except the data and model weights, which the first
+step downloads. The steps, in short:
+
+1. Create the environment (below) and install `requirements.txt`.
+2. `python scripts/p0_download_data.py --models` downloads the DocLayNet files and every checkpoint, at the exact
+   revisions we used.
+3. Follow `docs/PIPELINE.md` from step 1. It covers the data, the degraded images, image quality, detection, scoring,
+   the three research questions and the checks, for both page sets.
+
+The analysis steps run on a CPU. Detection, image quality and the RF-DETR fine-tuning need a CUDA GPU. On one RTX 3080
+Laptop GPU, detection took about 22 hours for the 109 conditions of one page set (the validation replicates added more),
+and the RF-DETR fine-tuning about 12 hours. On 18 Nov 2026 the repository was cloned fresh and rebuilt this way, and
+the page sets, a sample of the degraded images, the bootstrap resamples, the rescoring of every prediction file and all
+analysis tables matched our results byte for byte (`docs/PIPELINE.md`, "Reproduction check from a fresh clone").
+
+## Repository layout
+
+```
+rdld/                 shared package: paths, DocLayNet schema, degradations, detectors, evaluation, intervals
+scripts/              numbered phase scripts (p0_ ... p7_), run in the order given in docs/PIPELINE.md
+third_party/          RoDLA perturbation code (unchanged) and ocrodeg
+docs/PIPELINE.md      how to run everything, step by step, and where each paper number comes from
+docs/RUNBOOK.md       the short version: download, then build the page sets
+docs/phases/          one folder per phase, one notes file per person
+docs/base_paper/      base paper details and links
+explanation_guide/    results walkthrough: executed notebook and PDF
+literature_search/    search scripts, log, records and references
+figures/              figures from the feasibility stage
+requirements.txt      exact package versions
+```
+
+## Data folders
+
+Data and results are not in Git. They sit next to the repository, and every script reads its data folder from the
+`RDLD_DATA` environment variable (default `../RDLD_data`):
+
+```
+RDLD_data/               validation page set
+  doclaynet/             300 clean pages, COCO annotations, manifest
+  degraded/              degraded-image cache and the condition lists
+  predictions/           detector outputs, one file per detector and condition
+  results/               metric tables and figures, by phase
+RDLD_data_test/          official test-split page set, same layout
+RDLD_data_docboot/       document-bootstrap results for the validation pages
+RDLD_data_test_docboot/  document-bootstrap results for the test pages
+```
+
+## Environment
+
+Conda env `rodla_layout` (Python 3.10.21, torch 2.5.1+cu121). `requirements.txt` pins the exact versions every result
+was produced with; its header gives the CUDA install line for torch and the conda line for Tesseract 5.5.3, which the
+OCR step needs. Run scripts from the repository root: `python scripts/<name>.py`.
 
 ## Branches
 
@@ -25,37 +88,9 @@ condition.
 |---|---|---|
 | `main` | The full code: both person branches merged | Khizar |
 | `khizar` | Detection, evaluation, statistics | Khizar |
-| `alishba` | Data, perturbation, image quality, EDA, OCR | Alishba |
+| `alishba` | Data, degradation, image quality, EDA, OCR | Alishba |
 
-## Layout
-
-```
-rdld/             shared package: paths, DocLayNet schema, third-party loader
-scripts/          numbered phase scripts
-third_party/      RoDLA perturbation code (unchanged) and ocrodeg
-literature_search/ search scripts, log, records and references
-docs/phases/      one folder per phase, one notes file per person
-docs/PIPELINE.md  how to run the pipeline, step by step
-docs/base_paper/  base paper details and links
-figures/          figures from the feasibility stage
-```
-
-Data and results are not in Git. They live in `../RDLD_data/` (override with `RDLD_DATA`):
-
-```
-RDLD_data/doclaynet/     300 clean pages, COCO annotations, manifest
-RDLD_data/degraded/      perturbation cache
-RDLD_data/predictions/   detector output cache
-RDLD_data/results/       metric tables and figures, by phase
-```
-
-The test page set lives in `../RDLD_data_test/` with the same layout (`RDLD_DATA=../RDLD_data_test`).
-
-## Environment
-
-Conda env `rodla_layout` (Python 3.10.21, torch 2.5.1+cu121). `requirements.txt` pins the exact versions every result
-was produced with; its header gives the CUDA install line for torch and the conda line for Tesseract 5.5.3.
-Run scripts from the repo root: `python scripts/<name>.py`. The full run order is in `docs/PIPELINE.md`.
+Changes are made on the person's branch first and then merged into `main`.
 
 ## Data, models and licences
 
