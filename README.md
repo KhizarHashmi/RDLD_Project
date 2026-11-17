@@ -53,5 +53,25 @@ The test page set lives in `../RDLD_data_test/` with the same layout (`RDLD_DATA
 
 ## Environment
 
-Conda env `rodla_layout` (Python 3.10, torch 2.5.1+cu121). `pip install -r requirements.txt`.
-Run scripts from the repo root: `python scripts/<name>.py`.
+Conda env `rodla_layout` (Python 3.10.21, torch 2.5.1+cu121). `requirements.txt` pins the exact versions every result
+was produced with; its header gives the CUDA install line for torch and the conda line for Tesseract 5.5.3.
+Run scripts from the repo root: `python scripts/<name>.py`. The full run order is in `docs/PIPELINE.md`.
+
+## Data, models and licences
+
+Nothing below is redistributed in this repository. The scripts download each item from its source at run time.
+
+| Item | Source | Licence |
+|---|---|---|
+| DocLayNet v1.2 pages and annotations | `docling-project/DocLayNet-v1.2` (Hugging Face) | CDLA-Permissive-1.0 |
+| YOLO26-m, YOLO26-l, YOLOv11-m, YOLOv11-l | `hantian/yolo-doclaynet` | AGPL-3.0 |
+| Heron, Heron-101, Egret-m, Egret-xl | `docling-project/docling-layout-*` | Apache-2.0 |
+| DETR | `cmarkea/detr-layout-detection` | Apache-2.0 |
+| Deformable DETR | `Aryn/deformable-detr-DocLayNet` | Apache-2.0 |
+| RF-DETR medium (base for our fine-tuning) | `Roboflow/rf-detr-medium` | Apache-2.0 |
+| RoDLA perturbation code (vendored, unchanged) | `third_party/rodla_perturbation` | Apache-2.0, see its `LICENSE` and `NOTICE.md` |
+| ocrodeg, needed by RoDLA's `noise.py` (vendored) | `third_party/ocrodeg` | BSD-style (NVIDIA), see its `NOTICE.md` |
+
+**Fine-tuned RF-DETR weights.** Our RF-DETR checkpoint is not in the repository, because of its size. It is rebuilt
+with `p7_prepare_train_data.py` and `p7_finetune_rfdetr.py` (`docs/PIPELINE.md`, step 4). The base model is Apache-2.0,
+so the checkpoint can be shared, and it is available from the authors on request.

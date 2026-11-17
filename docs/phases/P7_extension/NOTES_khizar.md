@@ -301,6 +301,6 @@ shared resample.
 | 4 | Score cut-off sensitivity | Done (3.10). Changes the wording of the failure-type claim |
 | 5 | Damage as a confound in RQ1 and RQ2 | Done. RQ2 within-condition analysis holds damage fixed; RQ1 holds within predicted-damage bands (3.11) |
 | 6 | Deformable DETR clean mAP 66.20 vs 66.17 in the baseline rerun | Done. The baseline script runs its own inference pass; the two passes differ by at most 0.04 mAP points for every detector. All tables use the main pipeline's predictions |
-| 7 | Reproducibility: pinned versions, one-command rerun, RF-DETR weights after licence check | Open, before release |
+| 7 | Reproducibility: pinned versions, RF-DETR weights after licence check | Done. requirements.txt pins the env; README lists every source and licence; fine-tuned RF-DETR weights on request (base Apache-2.0) |
 | 8 | YOLO size × generation | Done (3.8) |
 | 9 | Document-level resampling | Done (2.3, 3.3–3.6) |
