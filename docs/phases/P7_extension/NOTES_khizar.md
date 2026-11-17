@@ -261,6 +261,27 @@ depends on the detector set, and we should not claim a fixed threshold.
 - Test mRD was missing because image quality finished after evaluation. Fixed with `--mrd-only`.
 - `fig_interaction_heatmaps.png` has an empty band above the first row with more than 3 detectors. Values are correct. To fix for the paper.
 
+### 3.11 RQ1 at equal predicted damage (`p7_rq1_damage_bands.py`, `p7/rq1_damage/`)
+
+Pairs remove more accuracy than singles, so the check asks whether the positive I_mult only appears where the two
+singles already do a lot of damage. The 847 noncontrol cells per page set are split into five equal-sized bands of the
+damage the multiplicative null predicts, P = 100 (1 − R(A) R(B)), and the mean I_mult is taken in each band on every
+shared resample.
+
+| Band | Validation P range | Validation mean I_mult [page CI] | Test P range | Test mean I_mult [page CI] |
+|---|---|---|---|---|
+| 1 | −5.3 to 7.2 | +0.99 [0.51, 1.36] | −1.9 to 8.0 | +0.69 [0.48, 0.91] |
+| 2 | 7.2 to 30.3 | +0.23 [−0.25, 0.79] | 8.0 to 28.7 | +0.25 [−0.08, 0.62] |
+| 3 | 30.3 to 50.3 | +1.93 [1.48, 2.48] | 28.7 to 50.3 | +1.88 [1.54, 2.30] |
+| 4 | 50.3 to 73.1 | +0.49 [0.00, 1.09] | 50.3 to 70.4 | +0.92 [0.59, 1.30] |
+| 5 | 73.1 to 99.5 | +1.62 [1.20, 2.35] | 70.4 to 99.2 | +1.93 [1.59, 2.35] |
+
+- The mean I_mult is positive in every band on both page sets. Bands 1, 3 and 5 exclude zero under both the page and
+  the document bootstrap on both page sets; band 4 does on the test pages only, band 2 nowhere.
+- Spearman ρ(P, I_mult) over cells: 0.06 [−0.02, 0.11] on validation, 0.13 [0.08, 0.16] on test. Compounding barely
+  tracks predicted damage, and it is already significant where the singles predict less than 8 % loss.
+- Detectors with a positive mean in each band (validation): 10, 7, 9, 7 and 10 of 11.
+
 ## 6. Limitations this adds
 - RF-DETR had about one sixth of the training pages, so it is not like for like.
 - YOLO generation is confounded with training length (100 vs 40 epochs).
@@ -278,8 +299,8 @@ depends on the detector set, and we should not claim a fixed threshold.
 | 2 | Official test split | Done. Findings replicate (3.2–3.9) |
 | 3 | BCa intervals | Done. Agree for RQ1; used as a check for RQ3 (3.5) |
 | 4 | Score cut-off sensitivity | Done (3.10). Changes the wording of the failure-type claim |
-| 5 | Damage as a confound in RQ1 and RQ2 | Open. RQ2 within-condition analysis already holds damage fixed; RQ1 not yet |
+| 5 | Damage as a confound in RQ1 and RQ2 | Done. RQ2 within-condition analysis holds damage fixed; RQ1 holds within predicted-damage bands (3.11) |
 | 6 | Deformable DETR clean mAP 66.20 vs 66.17 in the baseline rerun | Done. The baseline script runs its own inference pass; the two passes differ by at most 0.04 mAP points for every detector. All tables use the main pipeline's predictions |
-| 7 | Reproducibility: pinned versions, one-command rerun, RF-DETR weights after licence check | Open, before release |
+| 7 | Reproducibility: pinned versions, RF-DETR weights after licence check | Done. requirements.txt pins the env; README lists every source and licence; fine-tuned RF-DETR weights on request (base Apache-2.0) |
 | 8 | YOLO size × generation | Done (3.8) |
 | 9 | Document-level resampling | Done (2.3, 3.3–3.6) |
