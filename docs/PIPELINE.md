@@ -203,6 +203,7 @@ shown.
 | Test pages share no document with training or validation | `RDLD_DATA=../RDLD_data_test`, then `p7_test_split_leakage.py` |
 | Whole study on the official test split | `RDLD_DATA=../RDLD_data_test`, then repeat 1.2–1.4, 2.2, 3.2, 4.3, 5.1–5.3 and step 6 (no order or seed sets) |
 | Document bootstrap | In a separate data folder whose `doclaynet`, `degraded` and `predictions` link to the real ones: `BOOT_SCHEME=doc` on 5.2, then step 6. The page-bootstrap results stay untouched |
+| RQ1 at equal predicted damage | `p7_rq1_damage_bands.py`, once per data folder (both page sets, page and document bootstrap) |
 | Score cut-off | `TAU=0.3` and `TAU=0.7` on `p4_structural_errors`, `p5_ocr_downstream`, `p5_rq2_metric_validity`. These overwrite the 0.5 folders, so copy those first; the results go to `*_tau0.3` and `*_tau0.7` |
 
 ---
