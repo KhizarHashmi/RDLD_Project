@@ -120,6 +120,15 @@ The 11 detector names are `yolo` (YOLO26-m), `yolo26l`, `yolo11m`, `yolo11l`, `h
 
 Times were measured on one RTX 3080 Laptop GPU with 16 logical CPU cores.
 
+### Step 0: Download the data and checkpoints (network)
+```
+python scripts/p0_download_data.py --models
+```
+This fetches the DocLayNet v1.2 shards (all validation and test shards, and the 12 train shards used for RF-DETR) and
+every model checkpoint into the Hugging Face cache, each at the exact revision the paper used. The revision ids are
+listed at the top of the script. On 18 Nov 2026 every one of them was still the latest version on the Hub. Without
+`--models`, the detectors download their checkpoints the first time they run, at whatever revision is then the latest.
+
 ### Step 1: Data (CPU)
 | # | Command | Writes | Time |
 |---|---|---|---|

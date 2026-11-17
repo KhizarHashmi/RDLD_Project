@@ -59,7 +59,8 @@ Run scripts from the repo root: `python scripts/<name>.py`. The full run order i
 
 ## Data, models and licences
 
-Nothing below is redistributed in this repository. The scripts download each item from its source at run time.
+Nothing below is redistributed in this repository. `python scripts/p0_download_data.py --models` downloads the
+dataset shards and every checkpoint at the exact revision used for the paper (`docs/PIPELINE.md`, step 0).
 
 | Item | Source | Licence |
 |---|---|---|
