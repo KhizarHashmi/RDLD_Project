@@ -26,11 +26,18 @@ Per page and detector:
 
 Scope: all 300 pages; clean + every severity-2 single and pair (37 conditions).
 
+Clean-text check (TEXT=clean): the predicted and ground-truth regions are read from the
+words of the CLEAN page instead of the degraded one. The degradations used here do not
+move anything on the page, so the clean words sit where the degraded words would. OCR
+errors caused by the degradation then drop out completely, and any change in WER comes
+from the layout alone. Results go to p5/downstream_cleantext/, the main results are untouched.
+
 Outputs: RDLD_data/ocr/<config>/<page>.json        cached Tesseract words
          RDLD_data/results/p5/downstream/{downstream_pages.csv, downstream_configs.csv}
 
 Run:
   python scripts/p5_ocr_downstream.py
+  TEXT=clean python scripts/p5_ocr_downstream.py     # clean-text check
 """
 import sys
 from pathlib import Path
@@ -51,8 +58,11 @@ from rdld.doclaynet import NAME_TO_ID, load_coco
 TAU = float(os.getenv("TAU", "0.5"))
 SEV = 2
 WORKERS = int(os.getenv("WORKERS", "14"))
+TEXT = os.getenv("TEXT", "degraded")                 # "clean": read every condition with the clean-page words
+if TEXT not in ("degraded", "clean"):
+    raise SystemExit("TEXT must be 'degraded' or 'clean'")
 OCR = config.DATA_ROOT / "ocr"
-OUT = config.out_dir("p5", "downstream")
+OUT = config.out_dir("p5", "downstream" if TEXT == "degraded" else "downstream_cleantext")
 PICTURE, TABLE = NAME_TO_ID["Picture"], NAME_TO_ID["Table"]
 TESS = shutil.which("tesseract") or str(Path(sys.executable).parent / "Library" / "bin" / "tesseract.exe")
 # conda's activation script sets this; calling the env's python directly does not
@@ -160,7 +170,8 @@ def score(args):
             pred[d["image_id"]].append(([x, y, x + w, y + h], d["category_id"]))
     rows = []
     for iid, (gb, gc, fname) in _state.items():
-        words = json.loads((OCR / cfg / fname.replace(".png", ".json")).read_text(encoding="utf-8"))
+        src = "clean" if TEXT == "clean" else cfg
+        words = json.loads((OCR / src / fname.replace(".png", ".json")).read_text(encoding="utf-8"))
         ref = read(words, gb, gc)
         pb = np.array([p[0] for p in pred[iid]]).reshape(-1, 4)
         pc = [p[1] for p in pred[iid]]
@@ -191,7 +202,7 @@ def main():
     ocr_page(jobs[0])                                    # fail fast before launching the pool
     if not json.loads((OCR / "clean" / images[0]["file_name"].replace(".png", ".json")).read_text(encoding="utf-8")):
         raise SystemExit("tesseract returned no words on the first clean page -- check TESSDATA_PREFIX")
-    print(f"OCR: {len(sel)} conditions x {len(images)} pages ({TESS})")
+    print(f"OCR: {len(sel)} conditions x {len(images)} pages ({TESS}); regions read with {TEXT} words")
     with Pool(WORKERS) as pool:
         for i, _ in enumerate(pool.imap_unordered(ocr_page, jobs, chunksize=4), 1):
             if i % 1000 == 0 or i == len(jobs):
