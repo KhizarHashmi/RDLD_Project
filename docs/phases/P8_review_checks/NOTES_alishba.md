@@ -1,8 +1,8 @@
 # P8 - Review Checks - Alishba (Workstream A)
 
 **Date:** 2026-11-26, updated 2026-11-27
-**Status:** clean-text reading, mixed-severity pairs and the test-page replicates done (Section 3). Geometric pilot
-code ready; its results are added when the runs finish.
+**Status:** done. Clean-text reading, mixed-severity pairs, the test-page replicates and the geometric pilot
+(Section 3).
 
 ## 1. Why
 The review of the paper raised three points that sit in Workstream A.
@@ -110,5 +110,18 @@ The second seed moves the interaction by 0.21 to 0.58 times the page-bootstrap n
 pages), and no significant call changes sign. In reversed order, 170 of 308 cells are significant on the test pages
 (164 on the validation pages), with a median of 0.57 (0.52).
 
-### 3.4 Geometric pilot
-Added after the runs finish.
+### 3.4 Geometric pilot (test pages, severity 2, 18 conditions, 176 noncontrol cells)
+Results from Workstream B (`results/p8/geometric/`).
+
+| | Cells | Super-mult. | Sub-mult. | Median I_mult | Detectors with median > 0 |
+|---|---|---|---|---|---|
+| Pairs with rotation | 88 | 41 | 3 | 1.26 | 10/11 |
+| Pairs with keystoning | 88 | 12 | 13 | -0.17 | 4/11 |
+| Image pairs at severity 2 (reference) | 308 | 117 | 51 | 1.08 | 10/11 |
+
+Alone, rotation removes 33.2 to 66.9 mAP points and keystoning 6.3 to 27.8. Pairs with rotation compound like the
+image pairs; pairs with keystoning do not. The strongest is rotation + vibration (mean I_mult 5.12).
+
+The moved boxes matter here. The upright box around a turned region is larger than the region, so it is easier to
+match: the clean predictions moved with the page score 2.2 to 12.1 points above clean. Measured against these moved
+predictions instead, every one of the 176 cells keeps its class, so the result does not come from the box shape.
